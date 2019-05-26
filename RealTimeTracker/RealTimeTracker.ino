@@ -1,10 +1,3 @@
-/*  
- *  GPRS+GPS Quadband Module (SIM808)
- *  
- *  Implementation:    Rodrigo Alves
- */
-
-
 #include<SoftwareSerial.h>
 
 extern uint8_t SmallFont[];

@@ -1,5 +1,4 @@
 #include<SoftwareSerial.h>
-
 extern uint8_t SmallFont[];
 
 #define rxPin 11
@@ -7,8 +6,7 @@ extern uint8_t SmallFont[];
 
 SoftwareSerial mySerial(txPin, rxPin);
 
-char url[] = "http://5.253.27.35:8080";
-
+const char url[] = "http://5.253.27.35:8080/api/device/add/";
 char response[200];
 
 char latitude[15];
@@ -26,42 +24,36 @@ void setup(){
 
     Serial.println("Starting...");
     power_on();
-
+    //sendATcommand("AT+CLIP=1", "OK", 1000);
     // starts the GPS and waits for signal
     start_GPS();
-
-//    while (sendATcommand("AT+CREG?", "+CREG: 0,1", 2000) == 0);
+    while (sendATcommand("AT+CREG?", "+CREG: 0,1", 2000) == 0);
     sendATcommand("AT+SAPBR=3,1,\"Contype\",\"GPRS\"", "OK", 2000);
     sendATcommand("AT+SAPBR=3,1,\"APN\",\"mtnirancell\"", "OK", 2000);
-    
+    sendATcommand("AT+SAPBR=3,1,\"USER\",\"\"", "OK", 2000);
+    sendATcommand("AT+SAPBR=3,1,\"PWD\",\"\"", "OK", 2000);
     // gets the GPRS bearer
-    sendATcommand("AT+SAPBR=0,1", "OK", 20000);
+    //sendATcommand("AT+SAPBR=0,1", "OK", 20000);
     while (sendATcommand("AT+SAPBR=1,1", "OK", 20000) == 0)
     {
       delay(5000);
     }
-
 }
 
 void loop(){
-
     // gets GPS data
     get_GPS();
-    
     // sends GPS data to the script
-    send_HTTP();
-    
-    //sendNMEALocation("81596199",frame);
-    //delay(3000);
+    send_HTTP();   
+    //sendNMEALocation("989164450465",frame);
+    delay(120000);
 }
 
 void power_on(){
-
     uint8_t answer=0;
-
     // checks if the module is started
     answer = sendATcommand("AT", "OK", 2000);
-    if (answer == 0)
+    if (answer == 0)  
     {
         // waits for an answer from the module
         while(answer == 0){  
@@ -69,7 +61,7 @@ void power_on(){
             answer = sendATcommand("AT", "OK", 2000);    
         }
     }
-    Serial.print("Power on");
+    Serial.println("Power on");
 
 }
 
@@ -78,12 +70,10 @@ int8_t start_GPS(){
     // starts the GPS
     while(sendATcommand("AT+CGNSPWR=1", "OK", 2000)==0);
     while(sendATcommand("AT+CGPSRST=0", "OK", 2000)==0);
-
     // waits for fix GPS
     while((( 
-//      sendATcommand("AT+CGPSSTATUS?", "2D Fix", 5000) || 
+      sendATcommand("AT+CGPSSTATUS?", "2D Fix", 5000) || 
         sendATcommand("AT+CGPSSTATUS?", "3D Fix", 5000)) == 0 ) );
-
     return 1;
 }
 
@@ -111,8 +101,8 @@ int8_t get_GPS(){
       Serial.println(response);
       
       strtok(response, ",");
-      strcpy(longitude,strtok(NULL, ",")); // Gets longitude
-      strcpy(latitude,strtok(NULL, ",")); // Gets latitude
+      strcpy(latitude,strtok(NULL, ",")); // Gets longitude
+      strcpy(longitude,strtok(NULL, ",")); // Gets latitude
       strcpy(altitude,strtok(NULL, ",")); // Gets altitude    
       strcpy(date,strtok(NULL, ",")); // Gets date
       strcpy(TTFF,strtok(NULL, ","));  
@@ -151,7 +141,7 @@ void sendNMEALocation(char * cellPhoneNumber, char * message)
 int8_t send_HTTP(){
   
     int8_t answer;
-    char aux_str[30];
+    char aux_str[200];
     char frame[200];
     // Initializes HTTP service
     answer = sendATcommand("AT+HTTPINIT", "OK", 10000);
@@ -162,13 +152,13 @@ int8_t send_HTTP(){
         if (answer == 1)
         {
             // Sets url 
-//            memset(aux_str, '\0', 200);
+            memset(aux_str, '\0', 200);
             sprintf(aux_str, "AT+HTTPPARA=\"URL\",\"%s", url);
             //limpar antesLIMPAR ANTES
             mySerial.print(aux_str);
             Serial.println(aux_str);
 //            memset(frame, '\0', 200);
-            sprintf(frame, "?bus_id=1&lat=%s&lon=%s&alt=%s&time=%s&TTFF=%s&sat=%s&speedOTG=%s&course=%s", latitude, longitude, altitude, date, TTFF, satellites, speedOTG, course);
+            sprintf(frame, "?visor=false&lat=%s&lon=%s&alt=%s&date=%s&TTFF=%s&sat=%s&speedOTG=%s&course=%s", latitude, longitude, altitude, date, TTFF, satellites, speedOTG, course);
             Serial.println(frame);
             mySerial.print(frame);
             
@@ -214,7 +204,7 @@ int8_t sendATcommand(char* ATcommand, char* expected_answer1, unsigned int timeo
     unsigned long previous;
     char readVar[200];
     char * auxChar;
-    
+
 
     memset(response, '\0', 200);    // Initialize the string
     memset(readVar, '\0', 200);    // Initialize the string

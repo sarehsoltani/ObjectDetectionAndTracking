@@ -98,7 +98,7 @@ void loop()
       dtostrf(lo, 6, 2, lon); //put float value of lo into char array of lon
       dtostrf(ws, 6, 2, wspeed);  //put float value of ws into char array of wspeed
     
-      sprintf(MESSAGE, "Latitude : %s\nLongitude : %s\nWind Speed : %s kph\nMy Module Is Working. Mewan Indula Pathirage. Try With This Link.\nhttp://www.latlong.net/Show-Latitude-Longitude.html\nhttp://maps.google.com/maps?q=%s,%s\n", lat, lon, wspeed, lat, lon);
+      sprintf(MESSAGE, "Latitude : %s\nLongitude : %s\nWind Speed : %s kph\nYou can see your device in this location:\nhttp://maps.google.com/maps?q=%s,%s\n", lat, lon, wspeed, lat, lon);
       
        Serial.println("Sim808 init success");
        Serial.println("Start to send message ...");

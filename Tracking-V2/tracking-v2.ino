@@ -9,7 +9,6 @@ char MESSAGE[300];
 char lat[12];
 char lon[12];
 char wspeed[12];
-
 char phone[16];
 char datetime[24];
 

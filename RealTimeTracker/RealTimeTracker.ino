@@ -1,3 +1,6 @@
+#include <DFRobot_sim808.h>
+#include <sim808.h>
+
 #include<SoftwareSerial.h>
 extern uint8_t SmallFont[];
 
@@ -5,7 +8,7 @@ extern uint8_t SmallFont[];
 #define txPin 10
 
 SoftwareSerial mySerial(txPin, rxPin);
-
+DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR
 const char url[] = "http://5.253.27.35:8080/api/device/add/";
 char response[200];
 
@@ -23,26 +26,76 @@ void setup(){
     Serial.begin(9600); 
 
     Serial.println("Starting...");
-    power_on();
+    //power_on();
     //sendATcommand("AT+CLIP=1", "OK", 1000);
+    //delay(3000);  
+    //while( (sendATcommand("AT+CREG?", "+CREG: 0,1", 1000) || sendATcommand("AT+CREG?", "+CREG: 0,5", 1000)) == 0 );
+    //sendATcommand("AT+CLIP=1", "OK", 1000); 
+    
     // starts the GPS and waits for signal
-    start_GPS();
-    while (sendATcommand("AT+CREG?", "+CREG: 0,1", 2000) == 0);
-    sendATcommand("AT+SAPBR=3,1,\"Contype\",\"GPRS\"", "OK", 2000);
-    sendATcommand("AT+SAPBR=3,1,\"APN\",\"mtnirancell\"", "OK", 2000);
-    sendATcommand("AT+SAPBR=3,1,\"USER\",\"\"", "OK", 2000);
-    sendATcommand("AT+SAPBR=3,1,\"PWD\",\"\"", "OK", 2000);
+//    while ( start_GPS() == 0);
+      while(!sim808.init())
+  {
+      Serial.print("Sim808 init error\r\n");
+      delay(1000);
+  }
+  delay(3000);
+
+  if( sim808.attachGPS())
+      Serial.println("Open the GPS power success");
+  else 
+      Serial.println("Open the GPS power failure");
+      
+  Serial.println("Init Success, please send SMS message to me!");
+
+     
+//    while (sendATcommand("AT+CREG?", "+CREG: 0,1", 2000) == 0);
+    //start_GPS();
+    // sets APN , user name and password
+//    sendATcommand("AT+SAPBR=3,1,\"Contype\",\"GPRS\"", "OK", 2000);
+//    sendATcommand("AT+SAPBR=3,1,\"APN\",\"mtnirancell\"", "OK", 2000);
+//    sendATcommand("AT+SAPBR=3,1,\"USER\",\"\"", "OK", 2000);
+//    sendATcommand("AT+SAPBR=3,1,\"PWD\",\"\"", "OK", 2000);
     // gets the GPRS bearer
-    //sendATcommand("AT+SAPBR=0,1", "OK", 20000);
-    while (sendATcommand("AT+SAPBR=1,1", "OK", 20000) == 0)
-    {
-      delay(5000);
-    }
+//    sendATcommand("AT+SAPBR=0,1", "OK", 20000);
+//    while (sendATcommand("AT+SAPBR=1,1", "OK", 20000) == 0)
+//    {
+//      delay(5000);
+//    }
 }
 
 void loop(){
     // gets GPS data
-    get_GPS();
+    while(!sim808.getGPS())
+    {
+//      Serial.println("hi");
+    }
+
+   
+      Serial.print(sim808.GPSdata.year);
+      Serial.print("/");
+      Serial.print(sim808.GPSdata.month);
+      Serial.print("/");
+      Serial.print(sim808.GPSdata.day);
+      Serial.print(" ");
+      Serial.print(sim808.GPSdata.hour);
+      Serial.print(":");
+      Serial.print(sim808.GPSdata.minute);
+      Serial.print(":");
+      Serial.print(sim808.GPSdata.second);
+      Serial.print(":");
+      Serial.println(sim808.GPSdata.centisecond);
+      Serial.print("latitude :");
+      Serial.println(sim808.GPSdata.lat);
+      Serial.print("longitude :");
+      Serial.println(sim808.GPSdata.lon);
+      Serial.print("speed_kph :");
+      Serial.println(sim808.GPSdata.speed_kph);
+      Serial.print("heading :");
+      Serial.println(sim808.GPSdata.heading);
+      Serial.println();
+  
+    //get_GPS();
     // sends GPS data to the script
     send_HTTP();   
     //sendNMEALocation("989164450465",frame);
@@ -68,13 +121,33 @@ void power_on(){
 int8_t start_GPS(){
   
     // starts the GPS
-    while(sendATcommand("AT+CGNSPWR=1", "OK", 2000)==0);
-    while(sendATcommand("AT+CGPSRST=0", "OK", 2000)==0);
+    //while(sendATcommand("AT+CGNSPWR=1", "OK", 2000)==0);
+    //while(sendATcommand("AT+CGPSRST=0", "OK", 2000)==0);
     // waits for fix GPS
-    while((( 
-      sendATcommand("AT+CGPSSTATUS?", "2D Fix", 5000) || 
-        sendATcommand("AT+CGPSSTATUS?", "3D Fix", 5000)) == 0 ) );
-    return 1;
+    //while((( 
+    //  sendATcommand("AT+CGPSSTATUS?", "2D Fix", 5000) || 
+      //  sendATcommand("AT+CGPSSTATUS?", "3D Fix", 5000)) == 0 ) );
+    //return 1;
+    unsigned long previous;
+
+    previous = millis();
+    // starts the GPS
+    sendATcommand("AT+CGPSPWR=1", "OK", 2000);
+    sendATcommand("AT+CGPSRST=0", "OK", 2000);
+
+    // waits for fix GPS
+    while(( (sendATcommand("AT+CGPSSTATUS?", "2D Fix", 5000) || 
+        sendATcommand("AT+CGPSSTATUS?", "3D Fix", 5000)) == 0 ) && 
+        ((millis() - previous) < 90000));
+
+    if ((millis() - previous) < 90000)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;    
+    }
 }
 
 int8_t get_GPS(){
@@ -82,8 +155,8 @@ int8_t get_GPS(){
     int8_t answer;
     char * auxChar;
     // request Basic string
-    sendATcommand("AT+CGPSINF=0", "O", 8000);
- 
+//    sendATcommand("AT+CGPSINF=0", "O", 8000);
+    sendATcommand("AT+CGPSINF=0", "AT+CGPSINF=0\r\n\r\n", 2000);
     auxChar = strstr(response, "+CGPSINF:");
     if (auxChar != NULL)    
     {
